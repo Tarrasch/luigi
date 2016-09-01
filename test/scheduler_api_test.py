@@ -1238,6 +1238,45 @@ class SchedulerApiTest(unittest.TestCase):
         self.assertIsNone(self.sch.get_work(worker='assistant', assistant=True)['task_id'])
         self.assertIsNotNone(self.sch.get_work(worker=WORKER)['task_id'])
 
+    def test_disable_worker_stops_nurturing(self):
+        """
+        Test that a disabled worker doesnt nurture tasks (except the one its running)
+
+        Actually the scheduler shouldn't need to implement this as the worker
+        should die by itself (since it's not given any tasks), however luigi
+        webui will feel more responsive if tasks die as soon as possible.
+        """
+        self.sch = Scheduler(retry_delay=100000000000)  # Never pendify failed tasks
+        self.setTime(0)
+
+        self.sch.add_task(worker=WORKER, task_id='running', status=RUNNING)
+        self.sch.add_task(worker=WORKER, task_id='done', status=DONE)
+        self.sch.add_task(worker=WORKER, task_id='disabled', status=DISABLED)
+        self.sch.add_task(worker=WORKER, task_id='pending', status=PENDING)
+        self.sch.add_task(worker=WORKER, task_id='failed', status=FAILED)
+        self.sch.add_task(worker=WORKER, task_id='unknown', status=UNKNOWN)
+        self.sch.disable_worker(WORKER)
+
+        self.setTime(100000)
+        self.sch.ping(worker=WORKER)
+        self.sch.prune()
+
+        self.setTime(200000)
+        self.sch.ping(worker=WORKER)
+        self.sch.prune()
+        nurtured_statuses = [RUNNING]
+        not_nurtured_statuses = [DONE, UNKNOWN, DISABLED, PENDING, FAILED]
+
+        for status in nurtured_statuses:
+            print(status)
+            self.assertEqual(set([status.lower()]), set(self.sch.task_list(status, '')))
+
+        for status in not_nurtured_statuses:
+            print(status)
+            self.assertEqual(set([]), set(self.sch.task_list(status, '')))
+
+        self.assertEqual(1, len(self.sch.task_list(None, '')))  # None == All statuses
+
     def test_prune_worker(self):
         self.setTime(1)
         self.sch.add_worker(worker=WORKER, info={})
