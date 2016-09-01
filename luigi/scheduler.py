@@ -836,7 +836,17 @@ class Scheduler(object):
         assert worker is not None
         worker_id = worker
         # Return remaining tasks that have no FAILED descendants
-        self.update(worker_id, {'host': host}, get_work=True)
+        worker_enabled = self.update(
+            worker_id,
+            worker_reference={'host': host},
+            get_work=True)
+        if not worker_enabled:
+            reply = {'n_pending_tasks': 0,
+                     'running_tasks': 0,
+                     'task_id': None,
+                     'n_unique_pending': 0}
+            return reply
+
         if assistant:
             self.add_worker(worker_id, [('assistant', assistant)])
 
