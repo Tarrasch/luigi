@@ -173,6 +173,24 @@ class ExternalizeTaskTest(LuigiTestCase):
         task_ext_2 = luigi.task.externalize(MyTask)()
         self.assertEqual(task_normal.task_id, task_ext_1.task_id)
         self.assertEqual(task_normal.task_id, task_ext_2.task_id)
+        self.assertEqual(str(task_normal), str(task_ext_1))
+        self.assertEqual(str(task_normal), str(task_ext_2))
+
+    def test_externalize_same_id_with_luigi_namespace(self):
+        # Dependent on the new behavior from spotify/luigi#1953
+        luigi.namespace('lets.externalize')
+        class MyTask(luigi.Task):
+            def run(self):
+                pass
+        luigi.namespace()
+
+        task_normal = MyTask()
+        task_ext_1 = luigi.task.externalize(MyTask())
+        task_ext_2 = luigi.task.externalize(MyTask)()
+        self.assertEqual(task_normal.task_id, task_ext_1.task_id)
+        self.assertEqual(task_normal.task_id, task_ext_2.task_id)
+        self.assertEqual(str(task_normal), str(task_ext_1))
+        self.assertEqual(str(task_normal), str(task_ext_2))
 
     def test_externalize_with_requires(self):
         class MyTask(luigi.Task):
@@ -228,3 +246,15 @@ class TaskNamespaceTest(LuigiTestCase):
         self.assertEqual(namespace_test_helper.Baz.task_namespace, "othernamespace")
         self.assertEqual(namespace_test_helper.Baz.task_family, "othernamespace.Baz")
         self.assertEqual(str(namespace_test_helper.Baz(1)), "othernamespace.Baz(p=1)")
+
+    def test_uses_latest_namespace(self):
+        luigi.namespace('a')
+        class _BaseTask(luigi.Task):
+            pass
+        luigi.namespace('b')
+        class _ChildTask(_BaseTask):
+            pass
+        luigi.namespace()  # Reset everything
+        child_task = _ChildTask()
+        self.assertEqual(child_task.task_family, 'b._ChildTask')
+        self.assertEqual(str(child_task), 'b._ChildTask()')

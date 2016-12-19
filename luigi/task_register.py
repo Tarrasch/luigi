@@ -16,6 +16,13 @@
 #
 """
 Define the centralized register of all :class:`~luigi.task.Task` classes.
+
+**DEPRECATION WARNING**
+-----------------------
+
+Since after Luigi 2.4.0, everything in this module, including the exception
+types are now **deprecated** in the sense that it's not public API anymore.
+This is an internal module to luigi.
 """
 
 import abc
@@ -49,8 +56,7 @@ class Register(abc.ABCMeta):
     2. Keep track of all subclasses of :py:class:`Task` and expose them.
     """
     __instance_cache = {}
-    _UNSET_NAMESPACE = object()
-    _default_namespace = _UNSET_NAMESPACE
+    _default_namespace = ''
     _reg = []
     AMBIGUOUS_CLASS = object()  # Placeholder denoting an error
     """If this value is returned by :py:meth:`_get_reg` then there is an
@@ -67,14 +73,8 @@ class Register(abc.ABCMeta):
         whatever the currently declared namespace is.
         """
         cls = super(Register, metacls).__new__(metacls, classname, bases, classdict)
-
-        # check if the namespace is not set, and if so, set it to the current default,
-        # which might not be the _UNSET_NAMESPACE
-        if cls.task_namespace == metacls._UNSET_NAMESPACE:
-            cls.task_namespace = metacls._default_namespace
-
+        cls._namespace_at_class_time = metacls._default_namespace
         metacls._reg.append(cls)
-
         return cls
 
     def __call__(cls, *args, **kwargs):
@@ -125,15 +125,12 @@ class Register(abc.ABCMeta):
     @property
     def task_family(cls):
         """
-        The task family for the given class.
-
-        If ``cls.task_namespace`` is not set, then it's the name of the class.
-        Otherwise, ``<task_namespace>.`` is prefixed to the class name.
+        Internal note: This function will be deleted soon.
         """
-        if cls.task_namespace == cls._UNSET_NAMESPACE:
+        if not cls._task_namespace():
             return cls.__name__
         else:
-            return "%s.%s" % (cls.task_namespace, cls.__name__)
+            return "{}.{}".format(cls._task_namespace(), cls.__name__)
 
     @classmethod
     def _get_reg(cls):
