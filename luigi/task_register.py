@@ -72,10 +72,10 @@ class Register(abc.ABCMeta):
         When the set or inherited namespace evaluates to ``None``, set the task namespace to
         whatever the currently declared namespace is.
         """
-        cls = super(Register, metacls).__new__(metacls, classname, bases, classdict)
-        cls._namespace_at_class_time = metacls._default_namespace
-        metacls._reg.append(cls)
-        return cls
+        task_cls = super(Register, metacls).__new__(metacls, classname, bases, classdict)
+        task_cls._namespace_at_class_time = metacls._default_namespace
+        metacls._reg.append(task_cls)
+        return task_cls
 
     def __call__(cls, *args, **kwargs):
         """
