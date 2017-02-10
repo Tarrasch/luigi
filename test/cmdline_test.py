@@ -333,7 +333,6 @@ class InvokeOverCmdlineTest(unittest.TestCase):
         misspelled and not that the local parameters do not exist.
         """
         returncode, stdout, stderr = self._run_cmdline(['./bin/luigi', '--module', 'cmdline_test', 'ATaskThatFails', '--local-scheduler', '--no-lock'])
-        print(stdout)
 
         self.assertFalse(stdout.find(b"run() got an unexpected keyword argument 'tracking_url_callback'") != -1)
         self.assertFalse(stdout.find(b'During handling of the above exception, another exception occurred') != -1)

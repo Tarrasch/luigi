@@ -23,6 +23,7 @@ import argparse
 from contextlib import contextmanager
 from luigi.task_register import Register
 import sys
+import importlib
 
 
 class CmdlineParser(object):
@@ -66,6 +67,7 @@ class CmdlineParser(object):
         # argument (the task) could be different.
         known_args, _ = self._build_parser().parse_known_args(args=cmdline_args)
         root_task = known_args.root_task
+        self._load_module_using_namespace(root_task)
         parser = self._build_parser(root_task=root_task,
                                     help_all=known_args.core_help_all)
         self._possibly_exit_with_help(parser, known_args)
@@ -141,7 +143,25 @@ class CmdlineParser(object):
         """
         module = known_args.core_module
         if module:
-            __import__(module)
+            importlib.import_module(module)
+
+    @staticmethod
+    def _load_module_using_namespace(task_family):
+        """
+        Load the the taskname
+        """
+        results = task_family.rsplit('.', 1)
+        if len(results) > 1:
+            assert len(results) == 2
+            namespace, _ = results
+            try:
+                importlib.import_module(namespace)
+            except ImportError as ex:
+                # It's totally fine to fail
+                if namespace not in str(ex):
+                    # Thougth we should reraise if it wasn't "our" import step
+                    # that filed
+                    raise
 
     @staticmethod
     def _possibly_exit_with_help(parser, known_args):
